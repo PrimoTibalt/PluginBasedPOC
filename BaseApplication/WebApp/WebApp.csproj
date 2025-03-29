@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\BaseLibrary\BaseLibrary.csproj" />
+    <ProjectReference Include="..\PluginLoader\PluginLoader.csproj" />
   </ItemGroup>
 
   <PropertyGroup>
