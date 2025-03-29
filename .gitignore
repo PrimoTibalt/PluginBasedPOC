@@ -5,6 +5,7 @@
 
 #Plugins
 Plugins/*
+PluginsTemp/*
 
 # dotenv files
 .env
