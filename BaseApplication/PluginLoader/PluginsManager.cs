@@ -3,12 +3,13 @@ using System.Reflection;
 
 namespace PluginLoader
 {
-	public sealed class PluginsManager : BasePluginManager
+	public sealed class PluginsManager
 	{
 		private readonly Action<Assembly> _onPluginDeleted;
 		private readonly Action<Assembly> _loadPlugin;
 		private readonly AllPluginsFromDirectoryRetriever _pluginsRetriever;
 		private readonly FileSystemWatcher _watcher;
+		private readonly PluginManagerProperties properties = new();
 
 		public PluginsManager(string pluginsDirectory, Action<Assembly> onPluginDeleted, Action<Assembly> loadPlugin)
 		{
@@ -18,38 +19,38 @@ namespace PluginLoader
 
 			_watcher = new(pluginsDirectory);
 			_watcher.Filter = "*.*";
-			_watcher.Deleted += new FileSystemEventHandler(OnPluginDeleted);
-			_watcher.Created += new FileSystemEventHandler(OnPluginCreated);
+			_watcher.Deleted += new FileSystemEventHandler(OnArtifactDeletedFromSource);
+			_watcher.Created += new FileSystemEventHandler(OnArtifactCreatedInSource);
+
+			properties.LoadedPlugins = [];
 		}
 
 		public void Initialize(string pluginsTempDirectory) {
-			if (!Directory.Exists(pluginsTempDirectory)) {
-				Directory.CreateDirectory(pluginsTempDirectory);
+			if (Directory.Exists(pluginsTempDirectory)) {
+				Directory.Delete(pluginsTempDirectory, true);
 			}
 
-			LoadDirectory = pluginsTempDirectory;
+			Directory.CreateDirectory(pluginsTempDirectory);
+			properties.LoadDirectory = pluginsTempDirectory;
+
 			var pluginsArtifactsPaths = _pluginsRetriever.Get(null);
 			Trace.WriteLine($"Found {pluginsArtifactsPaths.Count} plugin artifacts");
 			if (pluginsArtifactsPaths.Count == 0)
 				return;
 
-			LoadedPlugins = new();
 			LoadPluginArtifacts(pluginsArtifactsPaths);
 
 			_watcher.EnableRaisingEvents = true;
 		}
 
 		private void LoadPluginArtifacts(List<string> pluginsArtifactsPaths) {
-			var initialDirectory = string.Empty;
-			var dllArtifacts = new List<string>();
+			var initialDirectory = Path.GetDirectoryName(pluginsArtifactsPaths.First());
+			var pluginsArtifactsDestinationPaths = new List<string>();
 			foreach (var pluginArtifactPath in pluginsArtifactsPaths) {
-				var destinationPluginPath = CopyToLoadDirectory(pluginArtifactPath);
-				if (Path.GetExtension(destinationPluginPath) == ".dll") {
-					dllArtifacts.Add(destinationPluginPath);
-					initialDirectory = Path.GetDirectoryName(pluginArtifactPath);
-				}
+				pluginsArtifactsDestinationPaths.Add(CopyToLoadDirectory(pluginArtifactPath));
 			}
 
+			var dllArtifacts = PluginArtifactsCollector.CollectPluginsDlls(pluginsArtifactsDestinationPaths);
 			Trace.WriteLine($"Found {dllArtifacts.Count} dll plugin artifacts");
 			foreach (var dllArtifact in dllArtifacts) {
 				var plugin = new PluginBasedLoadContext(dllArtifact);
@@ -58,18 +59,18 @@ namespace PluginLoader
 				_loadPlugin(assembly);
 				var oldPath = Path.Combine(initialDirectory, Path.GetFileName(dllArtifact));
 				Trace.WriteLine($"Plugin with path: {oldPath} was registered");
-				LoadedPlugins.Add(oldPath, plugin);
+				properties.LoadedPlugins.Add(oldPath, plugin);
 			}
 		}
 
 		private string CopyToLoadDirectory(string pluginArtifactPath) {
-			var destinationPluginPath = Path.Combine(LoadDirectory, Path.GetFileName(pluginArtifactPath));
+			var destinationPluginPath = Path.Combine(properties.LoadDirectory, Path.GetFileName(pluginArtifactPath));
 			for (var i = 0; i < 10; i++) {
 				try {
 					File.Copy(pluginArtifactPath, destinationPluginPath, true);
 					break;
 				} catch {
-					Trace.WriteLine($"Failed to copy plugins to temp directory {i+1} times");
+					Trace.WriteLine($"Failed to copy plugin {destinationPluginPath} to temp directory {i+1} times");
 					GC.Collect();
 					GC.WaitForPendingFinalizers();
 					if (i == 9)
@@ -80,21 +81,21 @@ namespace PluginLoader
 			return destinationPluginPath;
 		}
 
-		private void OnPluginDeleted(object s, FileSystemEventArgs args) {
+		private void OnArtifactDeletedFromSource(object s, FileSystemEventArgs args) {
 			Trace.WriteLine($"Plugin is being deleted: {args.FullPath}");
 			var fixedPath = args.FullPath.Replace('/', '\\');
-			if (LoadedPlugins.TryGetValue(fixedPath, out var plugin)) {
+			if (properties.LoadedPlugins.TryGetValue(fixedPath, out var plugin)) {
 				Trace.WriteLine("Found plugin to be deleted");
-				_onPluginDeleted(plugin.Assemblies.Single());
-				LoadedPlugins.Remove(fixedPath);
+				_onPluginDeleted(plugin.GetMainAssembly());
+				properties.LoadedPlugins.Remove(fixedPath);
 				plugin.Unload();
 			}
 		}
 
-		private void OnPluginCreated(object s, FileSystemEventArgs args) {
-			Trace.WriteLine($"New plugin is being created: {args.FullPath}");
+		private void OnArtifactCreatedInSource(object s, FileSystemEventArgs args) {
+			Trace.WriteLine($"New artifact has being created: {args.FullPath}");
 			if (Path.GetExtension(args.FullPath) == ".dll") {
-				var createdFileName = Path.GetFileName(args.FullPath).Split('.')[0];
+				var createdFileName = Path.GetFileNameWithoutExtension(args.FullPath);
 				var pluginsArtifactsPaths = _pluginsRetriever.Get(null)
 					.Where(path => Path.GetFileName(path)
 						.Contains(createdFileName)).ToList();
@@ -103,16 +104,17 @@ namespace PluginLoader
 		}
 	}
 
-	public abstract class BasePluginManager {
+	internal sealed class PluginManagerProperties {
 		private Dictionary<string, PluginBasedLoadContext> loadedPlugins;
 		private string loadDirectory;
-		protected Dictionary<string, PluginBasedLoadContext> LoadedPlugins {
+		public Dictionary<string, PluginBasedLoadContext> LoadedPlugins {
 			get => loadedPlugins;
 			set {
 				loadedPlugins ??= value;
 			}
 		}
-		protected string LoadDirectory {
+
+		public string LoadDirectory {
 			get => loadDirectory;
 			set {
 				if (string.IsNullOrEmpty(loadDirectory))

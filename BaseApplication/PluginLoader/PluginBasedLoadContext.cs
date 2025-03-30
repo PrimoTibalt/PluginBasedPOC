@@ -3,9 +3,9 @@ using System.Runtime.Loader;
 
 namespace PluginLoader;
 
-public sealed class PluginBasedLoadContext : AssemblyLoadContext {
+internal sealed class PluginBasedLoadContext : AssemblyLoadContext {
 	private readonly AssemblyDependencyResolver _resolver;
-	public PluginBasedLoadContext(string assemblyToLoadPath) : base(true) {
+	public PluginBasedLoadContext(string assemblyToLoadPath) : base(Path.GetFileNameWithoutExtension(assemblyToLoadPath), true) {
 		_resolver = new(assemblyToLoadPath);
 	}
 
@@ -16,5 +16,9 @@ public sealed class PluginBasedLoadContext : AssemblyLoadContext {
 			return null;
 
 		return LoadFromAssemblyPath(assemblyPath);
+	}
+
+	public Assembly GetMainAssembly() {
+		return this.LoadFromAssemblyName(new AssemblyName(Name));
 	}
 }
