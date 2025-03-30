@@ -1,9 +1,8 @@
 using System.Diagnostics;
-using Autofac;
 using BaseLibrary;
 using BaseLibrary.Printers;
-using PluginLoader;
-using WebApp.Middleware;
+using WebApp.Options;
+using WebApp.Services;
 
 Trace.Listeners.Add(new ConsoleTraceListener());
 
@@ -11,30 +10,13 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllersWithViews();
 builder.Services.AddScoped<IPrinter, DefaultPrinter>();
-builder.Services.AddSingleton(new SingletonContainerService());
+builder.Services.AddSingleton(new DIContainerService());
+builder.Services.Configure<PluginsPathsOptions>(builder.Configuration.GetSection("PluginsPaths"));
+builder.Services.AddSingleton<ServiceProviderPluginManager>();
 
 var app = builder.Build();
 
-var retriever = new InterfaceImplementationRetriever();
-var manager = new PluginsManager("D:/Programming/PluginBasedPOC/Plugins/",
-onPluginDeleted: (assembly) => {
-	var containerService = app.Services.GetRequiredService<SingletonContainerService>();
-	containerService.keyValuePairs.Remove(assembly.FullName);
-},
-loadPlugin: (assembly) => {
-	Trace.WriteLine($"Loading assembly {assembly.FullName}");
-	var implementations = retriever.Retrieve(assembly, [typeof(IPrinter)]);
-	var containerBuilder = new ContainerBuilder();
-	foreach (var implementation in implementations) {
-		var interfaceType = implementation.GetInterfaces().Where(i => i.Assembly == typeof(IPrinter).Assembly).Single();
-		containerBuilder.RegisterType(implementation).As(interfaceType);
-	}
-
-	var containerService = app.Services.GetRequiredService<SingletonContainerService>();
-	containerService.keyValuePairs[assembly.FullName] = containerBuilder;
-});
-manager.Initialize("D:/Programming/PluginBasedPOC/PluginsTemp/");
-
+app.UsePlugins();
 app.UseRouting();
 app.MapStaticAssets();
 app.MapControllerRoute(
@@ -43,4 +25,3 @@ app.MapControllerRoute(
 	.WithStaticAssets();
 
 app.Run();
-GC.KeepAlive(manager);

@@ -22,12 +22,12 @@ namespace PluginLoader
 			_watcher.Created += new FileSystemEventHandler(OnPluginCreated);
 		}
 
-		public void Initialize(string loadDirectory) {
-			if (!Directory.Exists(loadDirectory)) {
-				Directory.CreateDirectory(loadDirectory);
+		public void Initialize(string pluginsTempDirectory) {
+			if (!Directory.Exists(pluginsTempDirectory)) {
+				Directory.CreateDirectory(pluginsTempDirectory);
 			}
 
-			LoadDirectory = loadDirectory;
+			LoadDirectory = pluginsTempDirectory;
 			var pluginsArtifactsPaths = _pluginsRetriever.Get(null);
 			Trace.WriteLine($"Found {pluginsArtifactsPaths.Count} plugin artifacts");
 			if (pluginsArtifactsPaths.Count == 0)
@@ -69,6 +69,7 @@ namespace PluginLoader
 					File.Copy(pluginArtifactPath, destinationPluginPath, true);
 					break;
 				} catch {
+					Trace.WriteLine($"Failed to copy plugins to temp directory {i+1} times");
 					GC.Collect();
 					GC.WaitForPendingFinalizers();
 					if (i == 9)

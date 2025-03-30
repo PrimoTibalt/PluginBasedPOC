@@ -4,6 +4,6 @@ namespace FirstPlugin;
 
 public class PluginPrinter : IPrinter {
 	public string Print(string name) {
-		return "Hello World from plugin but it won't happen again";
+		return "<div>Hello World of Plugins!</div>";
 	}
 }
