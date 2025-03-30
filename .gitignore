@@ -4,8 +4,8 @@
 ## Get latest from `dotnet new gitignore`
 
 #Plugins
-Plugins/*
-PluginsTemp/*
+Plugins
+PluginsTemp
 
 # dotenv files
 .env
