@@ -1,10 +1,15 @@
 using System.Diagnostics;
+using System.Text;
 using BaseLibrary.Printers;
+using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using WebApp.Services;
 
 namespace WebApp.Controllers;
 
+[Authorize]
 public class HomeController : Controller
 {
 	private IEnumerable<IPrinter> _printers;
@@ -24,8 +29,15 @@ public class HomeController : Controller
 		_printers = printersSum;
 	}
 
-	public IActionResult Index()
+	public async Task<IActionResult> Index()
 	{
+		var identityToken = await HttpContext.GetTokenAsync(OpenIdConnectParameterNames.IdToken);
+		var builder = new StringBuilder();
+		foreach (var claim in User.Claims) {
+			builder.AppendLine($"Claim: {claim.Type}, value: {claim.Value}");
+		}
+
+		Trace.WriteLine($"IdToken: {identityToken}\n" + builder.ToString());
 		return View(model: string.Join("\n", _printers.Select(printer => printer.Print())));
 	}
 }
