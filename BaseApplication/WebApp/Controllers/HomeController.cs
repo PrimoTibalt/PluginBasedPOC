@@ -29,6 +29,7 @@ public class HomeController : Controller
 		_printers = printersSum;
 	}
 
+	[Authorize(Roles = "Customer")]
 	public async Task<IActionResult> Index()
 	{
 		var identityToken = await HttpContext.GetTokenAsync(OpenIdConnectParameterNames.IdToken);
@@ -39,5 +40,10 @@ public class HomeController : Controller
 
 		Trace.WriteLine($"IdToken: {identityToken}\n" + builder.ToString());
 		return View(model: string.Join("\n", _printers.Select(printer => printer.Print())));
+	}
+
+	[Authorize(Roles = "Administrator")]
+	public IActionResult OnlyAdmin() {
+		return View();
 	}
 }
