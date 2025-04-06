@@ -22,7 +22,8 @@ public static class TestUsers
                         new Claim(JwtClaimTypes.Name, "Alice Smith"),
                         new Claim(JwtClaimTypes.GivenName, "Alice"),
                         new Claim(JwtClaimTypes.FamilyName, "Smith"),
-                        new Claim("role", "User")
+                        new Claim("role", "User"),
+                        new Claim("role", "Customer")
                     }
                 },
                 new TestUser
@@ -36,7 +37,8 @@ public static class TestUsers
                         new Claim(JwtClaimTypes.GivenName, "Bob"),
                         new Claim(JwtClaimTypes.FamilyName, "Smith"),
                         new Claim("role", "User"),
-                        new Claim("role", "Administrator")
+                        new Claim("role", "Administrator"),
+                        new Claim("role", "Customer")
                     }
                 }
             };

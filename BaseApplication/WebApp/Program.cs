@@ -41,6 +41,9 @@ builder.Services.AddAuthentication(options => {
 	options.SaveTokens = true;
 	options.ResponseType = OpenIdConnectParameterNames.Code;
 	options.GetClaimsFromUserInfoEndpoint = true;
+	options.BackchannelHttpHandler = new HttpClientHandler {
+		ServerCertificateCustomValidationCallback = (_,_,_,_) => true,
+	};
 	options.TokenValidationParameters = new() {
 		NameClaimType = "given_name",
 		RoleClaimType = "role"
