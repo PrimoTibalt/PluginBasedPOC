@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Reflection;
+using PluginLoader.PluginsWatcher;
 
 namespace PluginLoader
 {
@@ -8,20 +9,18 @@ namespace PluginLoader
 		private readonly Action<Assembly> _onPluginDeleted;
 		private readonly Action<Assembly> _loadPlugin;
 		private readonly AllPluginsFromDirectoryRetriever _pluginsRetriever;
-		private readonly FileSystemWatcher _watcher;
+		private readonly IPluginsWatcher _watcher;
 		private readonly PluginManagerProperties properties = new();
 
-		public PluginsManager(string pluginsDirectory, Action<Assembly> onPluginDeleted, Action<Assembly> loadPlugin)
+		public PluginsManager(string pluginsDirectory, Action<Assembly> onPluginDeleted, Action<Assembly> loadPlugin, IPluginsWatcher pluginsWatcher)
 		{
 			_pluginsRetriever = new(pluginsDirectory);
 			_onPluginDeleted = onPluginDeleted;
 			_loadPlugin = loadPlugin;
 
-			_watcher = new(pluginsDirectory);
-			_watcher.Filter = "*.*";
-			_watcher.IncludeSubdirectories = true;
-			_watcher.Deleted += new FileSystemEventHandler(OnArtifactDeletedFromSource);
-			_watcher.Created += new FileSystemEventHandler(OnArtifactCreatedInSource);
+			_watcher = pluginsWatcher;
+			_watcher.RegisterOnFileDelete(OnArtifactDeletedFromSource);
+			_watcher.RegisterOnFileAdd(OnArtifactCreatedInSource);
 
 			properties.LoadedPlugins = [];
 		}
@@ -36,7 +35,7 @@ namespace PluginLoader
 
 			LoadPluginArtifacts(pluginsArtifactsPaths);
 
-			_watcher.EnableRaisingEvents = true;
+			_watcher.StartWatching();
 		}
 
 		private void SetupLoadDirectory(string pluginsTempDirectory) {
@@ -86,8 +85,8 @@ namespace PluginLoader
 			return destinationPluginPath;
 		}
 
-		private void OnArtifactDeletedFromSource(object s, FileSystemEventArgs args) {
-			var artifactPath = PathExtensions.Combine(true, args.FullPath);
+		private void OnArtifactDeletedFromSource(string path) {
+			var artifactPath = PathExtensions.Combine(true, path);
 			Trace.WriteLine($"Plugin is being deleted: {artifactPath}");
 			var fixedPath = PathExtensions.Combine(true, artifactPath);
 			if (properties.LoadedPlugins.TryGetValue(fixedPath, out var plugin)) {
@@ -100,8 +99,8 @@ namespace PluginLoader
 			}
 		}
 
-		private void OnArtifactCreatedInSource(object s, FileSystemEventArgs args) {
-			var artifactPath = PathExtensions.Combine(true, args.FullPath);
+		private void OnArtifactCreatedInSource(string path) {
+			var artifactPath = PathExtensions.Combine(true, path);
 			Trace.WriteLine($"New artifact has being created: {artifactPath}");
 			if (Path.GetExtension(artifactPath) == ".dll") {
 				var createdFileName = Path.GetFileNameWithoutExtension(artifactPath);

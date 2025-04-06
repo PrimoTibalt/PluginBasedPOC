@@ -9,7 +9,10 @@ public class SuperPrinter
 	public string SuperPrint()
 	{
 		var jsonSerialized = JsonConvert.SerializeObject(new { Name = "Soy Wojak", Age = 29 });
-		return $"I have super printed it from Autofac new version! Finish line. {jsonSerialized}";
+		return $$"""
+		I have super printed it from Autofac new version! Finish line. {{jsonSerialized}}
+		Now I even can use plugin from Docker!
+		""";
 	}
 }
 

@@ -3,6 +3,7 @@ using System.Reflection;
 using BaseLibrary.Printers;
 using Microsoft.Extensions.Options;
 using PluginLoader;
+using PluginLoader.PluginsWatcher;
 using WebApp.Options;
 
 namespace WebApp.Services
@@ -24,9 +25,19 @@ namespace WebApp.Services
 		{
 			if (pluginsManager is null)
 			{
-				pluginsManager = new PluginsManager(_pluginsPathsOptions.PluginsSourceDirectory, 
+				var root = _pluginsPathsOptions.PluginsSourceDirectory;
+				IPluginsWatcher pluginsWatcher;
+				if (Environment.GetEnvironmentVariable("DOTNET_USE_POLLING_FILE_WATCHER") is null) {
+					pluginsWatcher = new FileSystemWatcherPluginsWatcher(root);
+					Trace.WriteLine($"Using {nameof(FileSystemWatcherPluginsWatcher)} to watch plugins");
+				} else {
+					pluginsWatcher = new PollingPluginsWatcher(root);
+					Trace.WriteLine($"Using {nameof(PollingPluginsWatcher)} to watch plugins");
+				}
+				pluginsManager = new PluginsManager(root, 
 					CleanUpContainerServiceOnAssemblyDestruction,
-					LoadContainerServiceFromAssembly
+					LoadContainerServiceFromAssembly,
+					pluginsWatcher
 				);
 				pluginsManager.Initialize(_pluginsPathsOptions.PluginsTempDirectory);
 			}
