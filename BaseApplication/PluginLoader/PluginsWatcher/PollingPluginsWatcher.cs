@@ -10,7 +10,6 @@ public class PollingPluginsWatcher : IPluginsWatcher
 	private IChangeToken changeToken;
 	private Action<string> onAddRegisteredAction;
 	private Action<string> onDeleteRegisteredAction;
-	private List<string> filesBeforeNotification = [];
 
 	public PollingPluginsWatcher(string path) {
 		physicalFileProvider = new PhysicalFileProvider(path);
@@ -27,7 +26,6 @@ public class PollingPluginsWatcher : IPluginsWatcher
 
 	public void StartWatching()
 	{
-		filesBeforeNotification = GetAllFiles();
 		UpdateToken();
 	}
 
@@ -39,18 +37,15 @@ public class PollingPluginsWatcher : IPluginsWatcher
 
 	private void Notify(object _) {
 		Trace.WriteLine($"{nameof(PollingPluginsWatcher)} is notified about change");
-		var filesAfterNotification = GetAllFiles();
-		List<string> deletedFiles = [..filesBeforeNotification.Where(f => !filesAfterNotification.Contains(f))];
-		List<string> addedFiles = [..filesAfterNotification.Where(f => !filesBeforeNotification.Contains(f))];
-		foreach (var file in deletedFiles) {
+		List<string> filesAfterNotification = GetAllFiles();
+		foreach (string file in filesAfterNotification) {
 			onDeleteRegisteredAction(file);
 		}
 
-		foreach (var file in addedFiles) {
+		foreach (var file in filesAfterNotification) {
 			onAddRegisteredAction(file);
 		}
 
-		filesBeforeNotification = filesAfterNotification;
 		UpdateToken();
 	}
 

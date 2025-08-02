@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.Reflection;
+using System.Runtime.Loader;
 using BaseLibrary.Printers;
 using Microsoft.Extensions.Options;
 using PluginLoader;
@@ -47,22 +48,34 @@ namespace WebApp.Services
 
 		private void CleanUpContainerServiceOnAssemblyDestruction(Assembly assembly)
 		{
-			_dIContainerService.AssemblyNameToServiceCollectionMap.TryRemove(assembly.FullName, out var _);
+			if (_dIContainerService.AssemblyNameToServiceCollectionMap.TryRemove(assembly.FullName, out var _))
+			{
+				Trace.WriteLine($"Removed service collection for {assembly.FullName}");
+			}
+			else
+			{
+				Trace.WriteLine($"Was unable to remove service collection for {assembly.FullName}");
+			}
 		}
 
 		private void LoadContainerServiceFromAssembly(Assembly assembly)
 		{
-			var retriever = new InterfaceImplementationRetriever();
 			Trace.WriteLine($"Loading assembly {assembly.FullName}");
-			var implementations = retriever.Retrieve(assembly, [typeof(IPrinter)]);
-			var services = new ServiceCollection();
-			foreach (var implementation in implementations)
+			List<Type> implementations = InterfaceImplementationRetriever.Retrieve(assembly, [typeof(IPrinter)]);
+			ServiceCollection services = new();
+			foreach (Type implementation in implementations)
 			{
-				var interfaceType = implementation.GetInterfaces().Where(i => i.Assembly == typeof(IPrinter).Assembly).Single();
+				Type interfaceType = implementation.GetInterfaces().Where(i => i.Assembly == typeof(IPrinter).Assembly).Single();
 				services.AddScoped(interfaceType, implementation);
 			}
 
-			_dIContainerService.AssemblyNameToServiceCollectionMap.AddOrUpdate(assembly.FullName, services, (key, prevContainer) => services);
+			if (services.Count > 0)
+			{
+				_dIContainerService.AssemblyNameToServiceCollectionMap.AddOrUpdate(assembly.FullName,
+					(services, AssemblyLoadContext.GetLoadContext(assembly)),
+					(key, prevContainer) => (services, AssemblyLoadContext.GetLoadContext(assembly))
+				);
+			}
 		}
 	}
 }

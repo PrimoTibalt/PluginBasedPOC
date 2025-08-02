@@ -9,21 +9,27 @@ internal sealed class AllPluginsFromDirectoryRetriever {
 			throw new ArgumentException("Supplied directory does not exist.", nameof(path));
 	}
 
-	public List<string> Get(string extension = "dll") {
+	public List<List<string>> Get(string extension = "dll") {
 		if (string.IsNullOrEmpty(extension))
 			extension = "*";
 		var searchPattern = $"*.{extension}";
-		return RetrieveAllFilesFromDirectoryRecursively(searchPattern);
-	}
+		List<List<string>> result = new();
+		foreach (string directory in Directory.GetDirectories(_path))
+		{
+			result.Add(RetrieveAllFilesFromDirectoryRecursively(directory, searchPattern));
+		}
 
-	private List<string> RetrieveAllFilesFromDirectoryRecursively(string searchPattern) {
-		List<string> result = [.. Directory.GetFiles(_path, searchPattern)];
-		result.AddRange(RetrieveAllFilesFromSubDirectories(searchPattern));
 		return result;
 	}
 
-	private List<string> RetrieveAllFilesFromSubDirectories(string searchPattern) {
-		var directories = Directory.GetDirectories(_path);
+	private static List<string> RetrieveAllFilesFromDirectoryRecursively(string directory, string searchPattern) {
+		List<string> result = [.. Directory.GetFiles(directory, searchPattern)];
+		result.AddRange(RetrieveAllFilesFromSubDirectories(directory, searchPattern));
+		return result;
+	}
+
+	private static List<string> RetrieveAllFilesFromSubDirectories(string directory, string searchPattern) {
+		var directories = Directory.GetDirectories(directory);
 		return [.. directories.SelectMany(directory => Directory.GetFiles(directory, searchPattern))];
 	}
 }

@@ -1,6 +1,4 @@
-using BaseLibrary.Printers;
-
-namespace BaseLibrary;
+namespace BaseLibrary.Printers;
 
 public class DefaultPrinter : IPrinter {
 	public string Print(string name) {

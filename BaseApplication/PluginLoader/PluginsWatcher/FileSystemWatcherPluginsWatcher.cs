@@ -5,14 +5,14 @@ public class FileSystemWatcherPluginsWatcher : IPluginsWatcher
 	private readonly FileSystemWatcher fileSystemWatcher;
 	
 	public FileSystemWatcherPluginsWatcher(string path) {
-		fileSystemWatcher = new FileSystemWatcher(path);
+		fileSystemWatcher = new(path);
 		fileSystemWatcher.Filter = "*.*";
 		fileSystemWatcher.IncludeSubdirectories = true;
 	}
 
 	public void Dispose()
 	{
-		// Nothing to dispose
+		fileSystemWatcher?.Dispose();
 	}
 
 	public void RegisterOnFileAdd(Action<string> onAddAction)

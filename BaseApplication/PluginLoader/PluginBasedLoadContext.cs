@@ -5,7 +5,7 @@ namespace PluginLoader;
 
 internal sealed class PluginBasedLoadContext : AssemblyLoadContext {
 	private readonly AssemblyDependencyResolver _resolver;
-	public PluginBasedLoadContext(string assemblyToLoadPath) : base(Path.GetFileNameWithoutExtension(assemblyToLoadPath), true) {
+	public PluginBasedLoadContext(string assemblyToLoadPath) : base(Path.GetFileNameWithoutExtension(assemblyToLoadPath), isCollectible: true) {
 		_resolver = new(assemblyToLoadPath);
 	}
 

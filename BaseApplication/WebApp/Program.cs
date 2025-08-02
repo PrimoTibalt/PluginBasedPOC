@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using BaseLibrary;
 using BaseLibrary.Printers;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
@@ -13,9 +12,10 @@ Trace.Listeners.Add(new ConsoleTraceListener());
 
 var builder = WebApplication.CreateBuilder(args);
 
+Trace.WriteLine($"Process id {Process.GetCurrentProcess().Id}");
 builder.Services.AddControllersWithViews();
 builder.Services.AddScoped<IPrinter, DefaultPrinter>();
-builder.Services.AddSingleton(new DIContainerService());
+builder.Services.AddSingleton(typeof(DIContainerService));
 builder.Services.Configure<PluginsPathsOptions>(builder.Configuration.GetSection("PluginsPaths"));
 builder.Services.AddSingleton<ServiceProviderPluginManager>();
 
