@@ -1,0 +1,3 @@
+[submodule "BaseApplication/Microkernel"]
+	path = BaseApplication/Microkernel
+	url = https://github.com/PrimoTibalt/MicrokernelPOC.git
