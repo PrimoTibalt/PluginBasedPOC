@@ -75,7 +75,10 @@ namespace PluginLoader
 		}
 
 		private string CopyToLoadDirectory(string pluginArtifactPath) {
-			string destinationPluginPath = PathExtensions.Combine(useForwardSlash: true, properties.LoadDirectory, Path.GetFileName(pluginArtifactPath));
+			string destinationPluginPath = PathExtensions.Combine(useForwardSlash: true, properties.LoadDirectory, Directory.GetParent(pluginArtifactPath).Name, Path.GetFileName(pluginArtifactPath));
+			if (!Path.Exists(Directory.GetParent(destinationPluginPath).FullName))
+				Directory.CreateDirectory(Directory.GetParent(destinationPluginPath).FullName);
+
 			bool isSuccess = false;
 			for (var i = 0; i < 10; i++) {
 				try {

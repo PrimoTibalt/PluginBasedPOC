@@ -13,16 +13,16 @@ public class SuperPrinter
 		
 		return $$"""
 		I have super printed it from Autofac new version! Finish line. {{jsonSerialized}}
-		Now I even can use plugin from Docker! Testing on process with ids {{Process.GetCurrentProcess().Id}}
+		Now I even can use plugin from Docker! Testing on process with id '{{Process.GetCurrentProcess().Id}}'
 		""";
 	}
 }
 
 public class PluginPrinter : IPrinter {
 	public string Print(string name) {
-		var builder = new ContainerBuilder();
+		ContainerBuilder builder = new();
 		builder.Register((context) => new SuperPrinter());
-		var container = builder.Build();
+		IContainer container = builder.Build();
 		return container.Resolve<SuperPrinter>().SuperPrint();
 	}
 }

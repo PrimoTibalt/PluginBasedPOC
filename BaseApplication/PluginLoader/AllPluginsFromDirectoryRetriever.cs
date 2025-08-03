@@ -23,7 +23,7 @@ internal sealed class AllPluginsFromDirectoryRetriever {
 	}
 
 	private static List<string> RetrieveAllFilesFromDirectoryRecursively(string directory, string searchPattern) {
-		List<string> result = [.. Directory.GetFiles(directory, searchPattern)];
+		List<string> result = [.. Directory.GetFiles(directory, searchPattern).Select(pathToFile => PathExtensions.Combine(useForwardSlash: true, pathToFile))];
 		result.AddRange(RetrieveAllFilesFromSubDirectories(directory, searchPattern));
 		return result;
 	}
